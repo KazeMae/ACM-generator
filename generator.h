@@ -1,9 +1,9 @@
 #include"testlib.h"
 #include <sstream>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unordered_map>
 #include <thread>
+#include <iomanip>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -1457,9 +1457,145 @@ namespace generator{
         }
     }
 
+    namespace polygon {
+        template <typename T, typename = typename std::enable_if<std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
+        std::pair<T, T> __rand_xy_range(std::string format) {          
+            auto find_range = [&](std::string s) -> std::string {
+                size_t pos_c = format.find_first_of(s);
+                if (pos_c == std::string::npos) {
+                    if (s == "xX") {
+                        pos_c = 0;
+                    }
+                    else {
+                        pos_c = format.find_first_of(")]");
+                    }
+                }
+                size_t open = format.find_first_of("[(", pos_c);
+                size_t close = format.find_first_of(")]", pos_c);
+                if (open == std::string::npos || close == std::string::npos) {
+                    return std::string("");
+                }
+                return format.substr(open, close - open + 1);
+            };
+            std::string x_range = find_range("xX");
+            std::string y_range = find_range("yY");
+            if (x_range.empty() && y_range.empty()) {
+                msg::__fail_msg(msg::_err, "%s not a vaild range.", format.c_str());
+            }
+            if (x_range.empty()) {
+                x_range = y_range;
+            }
+            if (y_range.empty()) {
+                y_range = x_range;
+            }
+            T x,y;
+            if (std::is_integral<T>::value) {
+                x = rand::rand_int(x_range.c_str());
+                y = rand::rand_int(y_range.c_str());
+            }
+            else {
+                x = rand::rand_real(x_range.c_str());
+                y = rand::rand_real(y_range.c_str());
+            }
+            return std::make_pair(x,y);
+        }
+        
+        template<typename T, typename = typename std::enable_if<std::is_integral<T>::value || std::is_floating_point<T>::value>::type>
+        class Point {
+        public:
+            Point():x_(T(0)),y_(T(0)){};
+            Point(T x,T y):x_(x),y_(y){};
+            ~Point() = default;
+            Point operator+(Point b){return Point(x_ + b.x_, y_ + b.y_);}
+            Point operator-(Point b){return Point(x_ - b.x_, y_ - b.y_);}
+            T& operator[](int idx) { return idx == 0 ? x_ : y_; }
+            T& operator[](char c) {return c=='x' || c=='X' ? x_ : y_; }
+            T& operator[](std::string s) {
+                if(s.empty()) {
+                    msg::__fail_msg(msg::_err,"Index s is an empty string.");
+                }
+                return this->operator[](s[0]);
+            }
+            T& x(){return x_;}
+            T& y(){return y_;}
+            void rand(T x_left,T x_right,T y_left, T y_right) {
+                x_ = rnd.next(x_left,x_right);
+                y_ = rnd.next(y_left,y_right);
+            }
+            void rand(const char* format,...) {
+                FMT_TO_RESULT(format, format, _format);
+                std::pair<T,T> p = __rand_xy_range<T>(_format);
+                x_ = p.first;
+                y_ = p.second;
+            }
+        private:
+            T x_,y_;
+        };
+   
+        template <typename T>
+        typename std::enable_if<std::is_integral<T>::value, long long>::type
+        operator^(Point<T> a, Point<T> b) {
+            long long x1 = a['x'];
+            long long y1 = a['y'];
+            long long x2 = b['x'];
+            long long y2 = b['y'];
+            return x1 * y2 - y1 * x2;
+        }
+        
+        template <typename T>
+        typename std::enable_if<std::is_floating_point<T>::value, double>::type
+        operator^(Point<T> a, Point<T> b) {
+            double x1 = a['x'];
+            double y1 = a['y'];
+            double x2 = b['x'];
+            double y2 = b['y'];
+            return x1 * y2 - y1 * x2;
+        }
+        
+        template <typename T>
+        typename std::enable_if<std::is_integral<T>::value, long long>::type
+        operator*(Point<T> a, Point<T> b) {
+            long long x1 = a['x'];
+            long long y1 = a['y'];
+            long long x2 = b['x'];
+            long long y2 = b['y'];
+            return x1 * x2 + y1 * y2;
+        }
+        
+        template <typename T>
+        typename std::enable_if<std::is_floating_point<T>::value, double>::type
+        operator*(Point<T> a, Point<T> b) {
+            double x1 = a['x'];
+            double y1 = a['y'];
+            double x2 = b['x'];
+            double y2 = b['y'];
+            return x1 * x2 + y1 * y2;
+        }
+
+        template <typename T>
+        typename std::enable_if<std::is_integral<T>::value, void>::type
+        println(Point<T> p){
+            std::cout<<p['x']<<" "<<p['y']<<std::endl;
+        }
+
+        template <typename T>
+        typename std::enable_if<std::is_floating_point<T>::value, void>::type
+        println(Point<T> p,int accuracy = 6){
+            std::cout<<std::fixed;
+            std::cout<<std::setprecision(accuracy)<<p['x']<<" "<<p['y']<< std::endl;
+            std::cout<<std::defaultfloat;
+        }
+        
+        typedef Point<int> PointI;
+        typedef Point<long long> PointL;
+        typedef Point<float> PointF;
+        typedef Point<double> PointD;
+    }
+
     namespace all{
         using namespace generator::msg;
         using namespace generator::rand;
         using namespace generator::io;
+        using namespace generator::polygon;
     }
 }
