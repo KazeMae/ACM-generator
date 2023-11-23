@@ -1516,6 +1516,36 @@ namespace generator{
                 }
                 return this->operator[](s[0]);
             }
+            bool operator==(const Point<T>& p) const{
+                return this->x_ == p.x_ && this->y_ == p.y_;
+            }
+            bool operator!=(const Point<T>& p) const{
+                return this->x_ != p.x_ || this->y_ != p.y_;
+            }
+            bool operator<(const Point<T>& p) const{
+                if(this->x_ == p.x_) {
+                    return this->y_ < p.y_;
+                }
+                return this->x_ < p.x_;
+            }
+            bool operator<=(const Point<T>& p) const{
+                if(this->x_ == p.x_) {
+                    return this->y_ <= p.y_;
+                }
+                return this->x_ <= p.x_;
+            }
+            bool operator>(const Point<T>& p) const{
+                if(this->x_ == p.x_) {
+                    return this->y_ > p.y_;
+                }
+                return this->x_ > p.x_;
+            }
+            bool operator>=(const Point<T>& p) const{
+                if(this->x_ == p.x_) {
+                    return this->y_ >= p.y_;
+                }
+                return this->x_ >= p.x_;
+            }
             T& x(){return x_;}
             T& y(){return y_;}
             void rand(T x_left,T x_right,T y_left, T y_right) {
@@ -1598,4 +1628,15 @@ namespace generator{
         using namespace generator::io;
         using namespace generator::polygon;
     }
+}
+
+namespace std {
+    template <typename T>
+    struct hash<generator::polygon::Point<T>> {
+        size_t operator()(const generator::polygon::Point<T>& p) const {
+            size_t hash_x = std::hash<T>{}(p['x']);
+            size_t hash_y = std::hash<T>{}(p['y']);
+            return hash_x ^ (hash_y + 0x9e3779b9 + (hash_x << 6) + (hash_x >> 2));
+        }
+    };
 }
